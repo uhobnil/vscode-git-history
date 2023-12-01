@@ -2,7 +2,7 @@ import { container } from "../container/inversify.config";
 
 import { Change, getChangePair } from "./changes/changes";
 
-import { FileNode, FolderNode, PathType } from "./changes/tree";
+import { FileNode, FolderNode, PathType, PathCollection } from "./changes/tree";
 import { GitService } from "./service";
 
 export type ChangesCollection = { ref: string; changes: Change[] }[];
@@ -127,4 +127,24 @@ export function removeItemsByIndexList<T>(array: T[], indexList: number[]) {
 	for (var i = indexList.length - 1; i >= 0; i--) {
 		array.splice(indexList[i], 1);
 	}
+}
+
+export function convertTreeDataToArray(data: any): any {
+	const result = [];
+	for (const item of data) {
+		if (item.children) {
+			let tmpChildren = Object.entries(item.children as PathCollection)
+				.sort(compareFileTreeNode)
+				.map((item) => item[1]);
+			tmpChildren = convertTreeDataToArray(tmpChildren);
+			tmpChildren.forEach((item) => {
+				if (item.type === PathType.FILE) {
+					result.push(item);
+				}
+			});
+		} else {
+			result.push(item.props || item);
+		}
+	}
+	return result;
 }

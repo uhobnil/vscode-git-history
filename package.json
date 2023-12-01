@@ -94,6 +94,18 @@
 				"command": "git-history.history.filter",
 				"title": "Git History",
 				"icon": "$(filter)"
+			},
+			{
+				"category": "Git History",
+				"command": "git-history.history.diff.prev",
+				"title": "上一个文件",
+				"icon": "$(arrow-left)"
+			},
+			{
+				"category": "Git History",
+				"command": "git-history.history.diff.next",
+				"title": "下一个文件",
+				"icon": "$(arrow-right)"
 			}
 		],
 		"menus": {
@@ -118,6 +130,18 @@
 					"when": "view =~ /git-history.history/",
 					"group": "navigation@4"
 				}
+			],
+			"editor/title": [
+				{
+					"command": "git-history.history.diff.prev",
+					"when": "isInDiffEditor",
+					"group": "navigation"
+				},
+				{
+					"command": "git-history.history.diff.next",
+					"when": "isInDiffEditor",
+					"group": "navigation"
+				}
 			]
 		}
 	},
@@ -135,6 +159,7 @@
 		"prepare": "husky install"
 	},
 	"devDependencies": {
+		"@babel/types": "^7.23.4",
 		"@types/glob": "^7.2.0",
 		"@types/lodash": "^4.14.176",
 		"@types/mocha": "^9.0.0",

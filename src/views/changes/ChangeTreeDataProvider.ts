@@ -11,7 +11,11 @@ import {
 import { inject, injectable } from "inversify";
 
 import { TYPES } from "../../container/types";
-import { compareFileTreeNode, getDiffUriPair } from "../../git/utils";
+import {
+	compareFileTreeNode,
+	getDiffUriPair,
+	convertTreeDataToArray,
+} from "../../git/utils";
 import { EXTENSION_SCHEME } from "../../constants";
 import {
 	FileNode,
@@ -24,6 +28,8 @@ import {
 export class ChangeTreeDataProvider implements TreeDataProvider<TreeItem> {
 	private _onDidChangeTreeData = new EventEmitter<void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+	public fileNodeList = [];
+	public currentFilePath = "";
 
 	constructor(
 		@inject(TYPES.ExtensionContext) private context: ExtensionContext
@@ -35,17 +41,26 @@ export class ChangeTreeDataProvider implements TreeDataProvider<TreeItem> {
 
 	getChildren(element?: Path) {
 		// TODO: order by type and name
-		return Promise.resolve(
-			Object.entries(
-				element
-					? (element.children as PathCollection)!
-					: this.context.globalState.get<PathCollection>(
-							"changedFileTree"
-					  )!
-			)
-				.sort(compareFileTreeNode)
-				.map(([name, props]) => new Path(name, props))
-		);
+		const children = Object.entries(
+			element
+				? (element.children as PathCollection)!
+				: this.context.globalState.get<PathCollection>(
+						"changedFileTree"
+				  )!
+		)
+			.sort(compareFileTreeNode)
+			.map(([name, props]) => new Path(name, props));
+		console.log(children);
+
+		if (!element) {
+			this.fileNodeList = convertTreeDataToArray(children);
+		}
+
+		return Promise.resolve(children);
+	}
+
+	setCurrentFilePath(path: string) {
+		this.currentFilePath = path;
 	}
 
 	refresh() {
@@ -92,7 +107,7 @@ class Path extends TreeItem {
 		if (this.props.type === PathType.FILE) {
 			return {
 				title: "diff",
-				command: "vscode.diff",
+				command: "git-history.history.diff",
 				arguments: getDiffUriPair(this.props),
 			};
 		}
