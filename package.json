@@ -134,12 +134,12 @@
 			"editor/title": [
 				{
 					"command": "git-history.history.diff.prev",
-					"when": "isInDiffEditor",
+					"when": "isInDiffEditor && view.git-history.history.visible",
 					"group": "navigation"
 				},
 				{
 					"command": "git-history.history.diff.next",
-					"when": "isInDiffEditor",
+					"when": "isInDiffEditor && view.git-history.history.visible",
 					"group": "navigation"
 				}
 			]
