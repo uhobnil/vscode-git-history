@@ -63,11 +63,9 @@ const PickableList = <T extends Record<string, any>>(
 		scrollToIndex(locationIndex || 0, { align: "center" });
 	}, [scrollToIndex, locationIndex]);
 
-	const [isDragging, setIsDragging] = useState<boolean>(false);
 
 	const dragBind = useDrag(
 		({ type, xy, target }) => {
-			setIsDragging(true)
 			const [x, y] = xy;
 			const existedItems =
 				checkKeyIsPressed("Meta") || checkKeyIsPressed("Control")
@@ -115,11 +113,31 @@ const PickableList = <T extends Record<string, any>>(
 			}
 
 			if (type === "pointerup") {
-				setIsDragging(false)
+
+
+
 				if (dragStartIndex === INDEX_PLACEHOLDER) {
 					return;
 				}
 
+				const index = firstItemIndex + sortedIndex(itemYs, y) - 1;
+				if(checkKeyIsPressed('Shift') && lastClickedIndex !== null){
+					const start = Math.min(lastClickedIndex, index);
+					const end = Math.max(lastClickedIndex, index);
+					const newPickedItems = { ...existedItems };
+					for (let i = start; i <= end; i++) {
+						const id = list[i].slice(0, keyLength);
+						newPickedItems[id] = i;
+					}
+					setPickedItems(newPickedItems);
+					onPick &&
+						onPick(
+							Object.keys(newPickedItems).sort(
+								(id1, id2) => newPickedItems[id1] - newPickedItems[id2]
+							)
+						);
+					return;
+				}
 				setDragStartIndex(INDEX_PLACEHOLDER);
 				onPick &&
 					onPick(
@@ -156,8 +174,7 @@ const PickableList = <T extends Record<string, any>>(
 
 				setPickedItems(currentItems);
 			}
-		},
-		{ threshold: 10 }
+		}
 	);
 
 	return (
@@ -197,43 +214,7 @@ const PickableList = <T extends Record<string, any>>(
 							transform: `translateY(${virtualRow.start}px)`,
 						}}
 						onClick={(e) => {
-							if (isDragging) {
-								return
-							}
-							const index = virtualRow.index;
-							const itemId = list[index].slice(0, keyLength);
-							const existedItems =
-								e.metaKey || e.ctrlKey ? { ...pickedItems } : {};
-							if (e.shiftKey && lastClickedIndex !== null) {
-								const start = Math.min(lastClickedIndex, index);
-								const end = Math.max(lastClickedIndex, index);
-								const newPickedItems = { ...existedItems };
-								for (let i = start; i <= end; i++) {
-									const id = list[i].slice(0, keyLength);
-									newPickedItems[id] = i;
-								}
-								setPickedItems(newPickedItems);
-								onPick &&
-									onPick(
-										Object.keys(newPickedItems).sort(
-											(id1, id2) => newPickedItems[id1] - newPickedItems[id2]
-										)
-									);
-							} else {
-								if (existedItems.hasOwnProperty(itemId)) {
-									delete existedItems[itemId];
-								} else {
-									existedItems[itemId] = index;
-								}
-								setPickedItems(existedItems);
-								onPick &&
-									onPick(
-										Object.keys(existedItems).sort(
-											(id1, id2) => existedItems[id1] - existedItems[id2]
-										)
-									);
-							}
-							setLastClickedIndex(index);
+							setLastClickedIndex( virtualRow.index);
 						}}
 					>
 						{list[virtualRow.index] &&
