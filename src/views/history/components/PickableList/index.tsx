@@ -53,6 +53,7 @@ const PickableList = <T extends Record<string, any>>(
 	const [dragStartIndex, setDragStartIndex] =
 		useState<number>(INDEX_PLACEHOLDER);
 	const { checkKeyIsPressed } = useIsKeyPressed();
+	const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
 	useEffect(() => {
 		if (typeof locationIndex !== "number") {
@@ -62,96 +63,119 @@ const PickableList = <T extends Record<string, any>>(
 		scrollToIndex(locationIndex || 0, { align: "center" });
 	}, [scrollToIndex, locationIndex]);
 
-	const dragBind = useDrag(({ type, xy, target }) => {
-		const [x, y] = xy;
 
-		const existedItems =
-			checkKeyIsPressed("Meta") || checkKeyIsPressed("Control")
-				? pickedItems
-				: {};
-		const firstItemIndex = virtualItems[0].index;
-		if (type === "pointerdown") {
-			const scrollContainerEl = scrollContainerRef.current!;
+	const dragBind = useDrag(
+		({ type, xy, target }) => {
+			const [x, y] = xy;
+			const existedItems =
+				checkKeyIsPressed("Meta") || checkKeyIsPressed("Control")
+					? pickedItems
+					: {};
+			const firstItemIndex = virtualItems[0].index;
+			if (type === "pointerdown") {
+				const scrollContainerEl = scrollContainerRef.current!;
 
-			const isPointerOnButton = !!(target as HTMLElement).closest(
-				"[data-button]"
-			);
-			if (isPointerOnButton) {
-				return;
-			}
-
-			const isPointerOnScrollBar =
-				scrollContainerEl.getBoundingClientRect().width - x <=
-				SCROLL_BAR_WIDTH;
-			if (
-				checkScrollBarVisible(scrollContainerEl) &&
-				isPointerOnScrollBar
-			) {
-				return;
-			}
-
-			const realTimeContainerRect =
-				dragContainerRef.current?.getBoundingClientRect();
-			const realTimeItemYs = Array.from(
-				dragContainerRef.current?.children || []
-			).map((element) => element.getBoundingClientRect().y);
-
-			const dragStartIndex =
-				firstItemIndex + sortedIndex(realTimeItemYs, y) - 1;
-			setContainerRect(realTimeContainerRect);
-			setItemYs(realTimeItemYs);
-			setDragStartIndex(dragStartIndex);
-
-			const id = list![dragStartIndex].slice(0, keyLength);
-			setPickedItems({
-				...existedItems,
-				[id]: dragStartIndex,
-			});
-			return;
-		}
-
-		if (type === "pointerup") {
-			if (dragStartIndex === INDEX_PLACEHOLDER) {
-				return;
-			}
-
-			setDragStartIndex(INDEX_PLACEHOLDER);
-			onPick &&
-				onPick(
-					Object.keys(pickedItems!).sort(
-						(id1, id2) => pickedItems[id1] - pickedItems[id2]
-					)
+				const isPointerOnButton = !!(target as HTMLElement).closest(
+					"[data-button]"
 				);
-			return;
-		}
+				if (isPointerOnButton) {
+					return;
+				}
 
-		if (
-			containerRect &&
-			x > containerRect.x &&
-			x < containerRect.x + containerRect.width &&
-			y > containerRect.y &&
-			y < containerRect.y + containerRect.height
-		) {
-			if (dragStartIndex === INDEX_PLACEHOLDER) {
+				const isPointerOnScrollBar =
+					scrollContainerEl.getBoundingClientRect().width - x <=
+					SCROLL_BAR_WIDTH;
+				if (
+					checkScrollBarVisible(scrollContainerEl) &&
+					isPointerOnScrollBar
+				) {
+					return;
+				}
+
+				const realTimeContainerRect =
+					dragContainerRef.current?.getBoundingClientRect();
+				const realTimeItemYs = Array.from(
+					dragContainerRef.current?.children || []
+				).map((element) => element.getBoundingClientRect().y);
+
+				const dragStartIndex =
+					firstItemIndex + sortedIndex(realTimeItemYs, y) - 1;
+				setContainerRect(realTimeContainerRect);
+				setItemYs(realTimeItemYs);
+				setDragStartIndex(dragStartIndex);
+
+				const id = list![dragStartIndex].slice(0, keyLength);
+				setPickedItems({
+					...existedItems,
+					[id]: dragStartIndex,
+				});
 				return;
 			}
 
-			const currentIndex = firstItemIndex + sortedIndex(itemYs, y) - 1;
-			const currentItems = { ...existedItems };
-			for (
-				let index = Math.min(dragStartIndex, currentIndex);
-				index <= Math.max(dragStartIndex, currentIndex);
-				index++
-			) {
-				const id = list![index].slice(0, keyLength);
-				if (!Object.prototype.hasOwnProperty.call(currentItems, id)) {
-					currentItems[id] = index;
+			if (type === "pointerup") {
+
+
+
+				if (dragStartIndex === INDEX_PLACEHOLDER) {
+					return;
 				}
+
+				const index = firstItemIndex + sortedIndex(itemYs, y) - 1;
+				if(checkKeyIsPressed('Shift') && lastClickedIndex !== null){
+					const start = Math.min(lastClickedIndex, index);
+					const end = Math.max(lastClickedIndex, index);
+					const newPickedItems = { ...existedItems };
+					for (let i = start; i <= end; i++) {
+						const id = list[i].slice(0, keyLength);
+						newPickedItems[id] = i;
+					}
+					setPickedItems(newPickedItems);
+					onPick &&
+						onPick(
+							Object.keys(newPickedItems).sort(
+								(id1, id2) => newPickedItems[id1] - newPickedItems[id2]
+							)
+						);
+					return;
+				}
+				setDragStartIndex(INDEX_PLACEHOLDER);
+				onPick &&
+					onPick(
+						Object.keys(pickedItems!).sort(
+							(id1, id2) => pickedItems[id1] - pickedItems[id2]
+						)
+					);
+				return;
 			}
 
-			setPickedItems(currentItems);
+			if (
+				containerRect &&
+				x > containerRect.x &&
+				x < containerRect.x + containerRect.width &&
+				y > containerRect.y &&
+				y < containerRect.y + containerRect.height
+			) {
+				if (dragStartIndex === INDEX_PLACEHOLDER) {
+					return;
+				}
+
+				const currentIndex = firstItemIndex + sortedIndex(itemYs, y) - 1;
+				const currentItems = { ...existedItems };
+				for (
+					let index = Math.min(dragStartIndex, currentIndex);
+					index <= Math.max(dragStartIndex, currentIndex);
+					index++
+				) {
+					const id = list![index].slice(0, keyLength);
+					if (!Object.prototype.hasOwnProperty.call(currentItems, id)) {
+						currentItems[id] = index;
+					}
+				}
+
+				setPickedItems(currentItems);
+			}
 		}
-	});
+	);
 
 	return (
 		<div
@@ -188,6 +212,9 @@ const PickableList = <T extends Record<string, any>>(
 							width: "100%",
 							height: "22px",
 							transform: `translateY(${virtualRow.start}px)`,
+						}}
+						onClick={(e) => {
+							setLastClickedIndex( virtualRow.index);
 						}}
 					>
 						{list[virtualRow.index] &&
